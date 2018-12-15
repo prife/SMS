@@ -119,7 +119,7 @@ public class SmsMessage implements Parcelable {
     @Override
     public String toString() {
         return "发件人:" + mAddress
-                + "\n收件人:" + PhoneUtils.get(mSubId).getSelfRawNumber()
+                + "\n收件人:" + PhoneUtils.get(mSubId).getSelfRawNumber(true)
                 + "\n内容:" + mBody;
     }
 

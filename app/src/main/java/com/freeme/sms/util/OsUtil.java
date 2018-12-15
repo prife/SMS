@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
+import com.freeme.sms.Factory;
+
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -61,7 +63,7 @@ public class OsUtil {
             // cached as the process does not get killed if the user enables the permission setting.
             if (!sPermissions.containsKey(permission)
                     || sPermissions.get(permission) == PackageManager.PERMISSION_DENIED) {
-                final Context context = Utils.getApplication();
+                final Context context = Factory.get().getApplicationContext();
                 final int permissionState = context.checkSelfPermission(permission);
                 sPermissions.put(permission, permissionState);
             }

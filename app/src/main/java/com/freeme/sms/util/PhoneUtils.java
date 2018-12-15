@@ -11,6 +11,11 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.freeme.sms.Factory;
+import com.freeme.sms.R;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class PhoneUtils {
@@ -25,6 +30,8 @@ public abstract class PhoneUtils {
 
     // We always use -1 as default/invalid sub id although system may give us anything negative
     public static final int DEFAULT_SELF_SUB_ID = -1;
+    public static final int SIM_SLOT_INDEX_1 = 0;
+    public static final int SIM_SLOT_INDEX_2 = 1;
 
     protected final int mSubId;
     protected final Context mContext;
@@ -32,17 +39,45 @@ public abstract class PhoneUtils {
 
     public PhoneUtils(int subId) {
         mSubId = subId;
-        mContext = Utils.getApplication();
+        mContext = Factory.get().getApplicationContext();
         mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
     }
 
     /**
+     * Check if there is SIM inserted on the device
+     *
+     * @return true if there is SIM inserted, false otherwise
+     */
+    public abstract boolean hasSim();
+
+    /**
      * Get the SIM's self raw number, i.e. not canonicalized
      *
+     * @param allowOverride Whether to use the app's setting to override the self number
      * @return the original self number
      * @throws IllegalStateException if no active subscription on L-MR1+
      */
-    public abstract String getSelfRawNumber();
+    public abstract String getSelfRawNumber(final boolean allowOverride);
+
+    /**
+     * Returns the "effective" subId, or the subId used in the context of actual messages,
+     * conversations and subscription-specific settings, for the given "nominal" sub id.
+     * <p>
+     * For pre-L-MR1 platform, this should always be
+     * {@value #DEFAULT_SELF_SUB_ID};
+     * <p>
+     * On the other hand, for L-MR1 and above, DEFAULT_SELF_SUB_ID will be mapped to the system
+     * default subscription id for SMS.
+     *
+     * @param subId The input subId
+     * @return the real subId if we can convert
+     */
+    public abstract int getEffectiveSubId(int subId);
+
+    /**
+     * Returns the number of active subscriptions in the device.
+     */
+    public abstract int getActiveSubscriptionCount();
 
     /**
      * Get the default SMS subscription id
@@ -73,6 +108,13 @@ public abstract class PhoneUtils {
          * @return the subscription info of the SIM
          */
         SubscriptionInfo getActiveSubscriptionInfo();
+
+        /**
+         * Get the list of active SIMs in system. Only applies to L_MR1 above
+         *
+         * @return the list of subscription info for all inserted SIMs
+         */
+        List<SubscriptionInfo> getActiveSubscriptionInfoList();
     }
 
     /**
@@ -84,8 +126,29 @@ public abstract class PhoneUtils {
         }
 
         @Override
-        public String getSelfRawNumber() {
+        public boolean hasSim() {
+            return mTelephonyManager.getSimState() != TelephonyManager.SIM_STATE_ABSENT;
+        }
+
+        @Override
+        public String getSelfRawNumber(final boolean allowOverride) {
+            if (allowOverride) {
+                final String userDefinedNumber = getNumberFromPrefs(mContext, DEFAULT_SELF_SUB_ID);
+                if (!TextUtils.isEmpty(userDefinedNumber)) {
+                    return userDefinedNumber;
+                }
+            }
             return mTelephonyManager.getLine1Number();
+        }
+
+        @Override
+        public int getEffectiveSubId(int subId) {
+            return DEFAULT_SELF_SUB_ID;
+        }
+
+        @Override
+        public int getActiveSubscriptionCount() {
+            return hasSim() ? 1 : 0;
         }
 
         @Override
@@ -106,6 +169,8 @@ public abstract class PhoneUtils {
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP_MR1)
     public static class PhoneUtilsLMR1 extends PhoneUtils implements LMr1 {
+        private static final List<SubscriptionInfo> EMPTY_SUBSCRIPTION_LIST = new ArrayList<>();
+
         private final SubscriptionManager mSubscriptionManager;
 
         public PhoneUtilsLMR1(int subId) {
@@ -115,7 +180,19 @@ public abstract class PhoneUtils {
         }
 
         @Override
-        public String getSelfRawNumber() {
+        public boolean hasSim() {
+            return mSubscriptionManager.getActiveSubscriptionInfoCount() > 0;
+        }
+
+        @Override
+        public String getSelfRawNumber(final boolean allowOverride) {
+            if (allowOverride) {
+                final String userDefinedNumber = getNumberFromPrefs(mContext, mSubId);
+                if (!TextUtils.isEmpty(userDefinedNumber)) {
+                    return userDefinedNumber;
+                }
+            }
+
             final SubscriptionInfo subInfo = getActiveSubscriptionInfo();
             if (subInfo != null) {
                 String phoneNumber = subInfo.getNumber();
@@ -127,6 +204,19 @@ public abstract class PhoneUtils {
             Log.w(TAG, "getSelfRawNumber: subInfo is null for " + mSubId);
 
             return null;
+        }
+
+        @Override
+        public int getEffectiveSubId(int subId) {
+            if (subId == DEFAULT_SELF_SUB_ID) {
+                return getDefaultSmsSubscriptionId();
+            }
+            return subId;
+        }
+
+        @Override
+        public int getActiveSubscriptionCount() {
+            return mSubscriptionManager.getActiveSubscriptionInfoCount();
         }
 
         @Override
@@ -143,6 +233,16 @@ public abstract class PhoneUtils {
                 Log.e(TAG, "getActiveSubscriptionInfo: system exception for " + mSubId, e);
             }
             return null;
+        }
+
+        @Override
+        public List<SubscriptionInfo> getActiveSubscriptionInfoList() {
+            final List<SubscriptionInfo> subscriptionInfos =
+                    mSubscriptionManager.getActiveSubscriptionInfoList();
+            if (subscriptionInfos != null) {
+                return subscriptionInfos;
+            }
+            return EMPTY_SUBSCRIPTION_LIST;
         }
 
         @Override
@@ -220,6 +320,25 @@ public abstract class PhoneUtils {
                 }
             }
             return sPhoneUtilsInstancePreLMR1;
+        }
+    }
+
+    private static String getNumberFromPrefs(final Context context, final int subId) {
+        final SmsPrefs prefs = Factory.get().getSubscriptionPrefs(subId);
+        final String mmsPhoneNumberPrefKey = context.getString(R.string.sms_phone_number_pref_key);
+        final String userDefinedNumber = prefs.getString(mmsPhoneNumberPrefKey, null);
+        if (!TextUtils.isEmpty(userDefinedNumber)) {
+            return userDefinedNumber;
+        }
+        return null;
+    }
+
+    public LMr1 toLMr1() {
+        if (OsUtil.isAtLeastL_MR1()) {
+            return (LMr1) this;
+        } else {
+            Log.w(TAG, "toLMr1(): invalid OS version");
+            return null;
         }
     }
 }

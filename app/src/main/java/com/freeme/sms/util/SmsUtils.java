@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteException;
 import android.provider.Telephony.Sms;
 import android.util.Log;
 
+import com.freeme.sms.Factory;
+
 import java.util.Locale;
 
 public class SmsUtils {
@@ -49,7 +51,7 @@ public class SmsUtils {
         if (sHasSmsDateSentColumn == null) {
             Cursor cursor = null;
             try {
-                final Context context = Utils.getApplication();
+                final Context context = Factory.get().getApplicationContext();
                 cursor = SqliteWrapper.query(
                         context,
                         Sms.CONTENT_URI,

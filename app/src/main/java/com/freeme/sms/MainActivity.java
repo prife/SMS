@@ -1,22 +1,32 @@
 package com.freeme.sms;
 
+import android.Manifest;
 import android.annotation.TargetApi;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresPermission;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.provider.Telephony.Sms;
+import android.telephony.SubscriptionInfo;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 
+import com.freeme.sms.base.DialogFragment;
 import com.freeme.sms.model.SmsMessage;
+import com.freeme.sms.util.DialogFragmentHelper;
 import com.freeme.sms.util.OsUtil;
+import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsUtils;
 import com.freeme.sms.util.SqliteWrapper;
 import com.freeme.sms.util.ThreadPool;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -34,8 +44,49 @@ public class MainActivity extends AppCompatActivity {
         mTextView = findViewById(R.id.tv_show);
 
         if (hasRequiredPermissions()) {
-            readSms();
+            readSmsAfterEnterSelfNumber();
         }
+    }
+
+    private static final int MENU_ITEM_SETTING_NUMBER = 1;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, MENU_ITEM_SETTING_NUMBER, MENU_ITEM_SETTING_NUMBER, R.string.phone_number);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        MenuItem item;
+        item = menu.findItem(MENU_ITEM_SETTING_NUMBER);
+        if (item != null) {
+            final boolean hasPhonePermission = OsUtil.hasPhonePermission();
+            final boolean visible = hasPhonePermission
+                    && PhoneUtils.getDefault().getActiveSubscriptionCount() > 0;
+            item.setVisible(visible);
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        final int id = item.getItemId();
+        switch (id) {
+            case MENU_ITEM_SETTING_NUMBER:
+                DialogFragmentHelper.showSmsSubscriptionsDialog(getSupportFragmentManager(), new DialogFragment.IDialogResultListener() {
+                    @Override
+                    public void onDataResult(Object result) {
+                        readSms();
+                    }
+                }, false);
+                break;
+            default:
+                break;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -45,7 +96,8 @@ public class MainActivity extends AppCompatActivity {
             // We do not use grantResults as some of the granted permissions might have been
             // revoked while the permissions dialog box was being shown for the missing permissions.
             if (OsUtil.hasRequiredPermissions()) {
-                readSms();
+                invalidateOptionsMenu();
+                readSmsAfterEnterSelfNumber();
             }
         }
     }
@@ -69,6 +121,39 @@ public class MainActivity extends AppCompatActivity {
         requestPermissions(missingPermissions, REQUIRED_PERMISSIONS_REQUEST_CODE);
     }
 
+    @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
+    private boolean mayNeedEnterSelfNumber() {
+        List<SubscriptionInfo> infoList = PhoneUtils.getDefault().toLMr1()
+                .getActiveSubscriptionInfoList();
+        final int count;
+        if (infoList != null && (count = infoList.size()) > 0) {
+            for (int i = 0; i < count; i++) {
+                SubscriptionInfo info = infoList.get(i);
+                final int subId = info.getSubscriptionId();
+                String number = PhoneUtils.get(subId).getSelfRawNumber(true);
+                if (TextUtils.isEmpty(number)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void readSmsAfterEnterSelfNumber() {
+        if (mayNeedEnterSelfNumber()) {
+            DialogFragmentHelper.showSmsSubscriptionsDialog(getSupportFragmentManager(), new DialogFragment.IDialogResultListener() {
+                @Override
+                public void onDataResult(Object result) {
+                    readSms();
+                }
+            }, false);
+        } else {
+            readSms();
+        }
+    }
+
+    @RequiresPermission(allOf = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS})
     private void readSms() {
         ThreadPool.execute(new Runnable() {
             @Override
@@ -109,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @RequiresPermission(allOf = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS})
     private Cursor getSmsCursor(String smsSelection) {
         Cursor smsCursor = null;
 
