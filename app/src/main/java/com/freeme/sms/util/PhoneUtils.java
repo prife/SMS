@@ -5,7 +5,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Build;
 import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,13 +26,23 @@ public abstract class PhoneUtils {
     // We always use -1 as default/invalid sub id although system may give us anything negative
     public static final int DEFAULT_SELF_SUB_ID = -1;
 
-    protected final Context mContext;
     protected final int mSubId;
+    protected final Context mContext;
+    protected final TelephonyManager mTelephonyManager;
 
     public PhoneUtils(int subId) {
-        mContext = Utils.getApplication();
         mSubId = subId;
+        mContext = Utils.getApplication();
+        mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
     }
+
+    /**
+     * Get the SIM's self raw number, i.e. not canonicalized
+     *
+     * @return the original self number
+     * @throws IllegalStateException if no active subscription on L-MR1+
+     */
+    public abstract String getSelfRawNumber();
 
     /**
      * Get the default SMS subscription id
@@ -48,11 +61,31 @@ public abstract class PhoneUtils {
     public abstract int getSubIdFromTelephony(Cursor cursor, int subIdIndex);
 
     /**
+     * This interface packages methods should only compile on L_MR1.
+     * This is needed to make unit tests happy when mockito tries to
+     * mock these methods. Calling on these methods on L_MR1 requires
+     * an extra invocation of toMr1().
+     */
+    public interface LMr1 {
+        /**
+         * Get this SIM's information. Only applies to L_MR1 above
+         *
+         * @return the subscription info of the SIM
+         */
+        SubscriptionInfo getActiveSubscriptionInfo();
+    }
+
+    /**
      * The PhoneUtils class for pre L_MR1
      */
     public static class PhoneUtilsPreLMR1 extends PhoneUtils {
         public PhoneUtilsPreLMR1() {
             super(DEFAULT_SELF_SUB_ID);
+        }
+
+        @Override
+        public String getSelfRawNumber() {
+            return mTelephonyManager.getLine1Number();
         }
 
         @Override
@@ -72,13 +105,44 @@ public abstract class PhoneUtils {
      * The PhoneUtils class for L_MR1
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP_MR1)
-    public static class PhoneUtilsLMR1 extends PhoneUtils {
+    public static class PhoneUtilsLMR1 extends PhoneUtils implements LMr1 {
         private final SubscriptionManager mSubscriptionManager;
 
         public PhoneUtilsLMR1(int subId) {
             super(subId);
             mSubscriptionManager = (SubscriptionManager) mContext
                     .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        }
+
+        @Override
+        public String getSelfRawNumber() {
+            final SubscriptionInfo subInfo = getActiveSubscriptionInfo();
+            if (subInfo != null) {
+                String phoneNumber = subInfo.getNumber();
+                if (TextUtils.isEmpty(phoneNumber)) {
+                    Log.d(TAG, "SubscriptionInfo phone number for self is empty!");
+                }
+                return phoneNumber;
+            }
+            Log.w(TAG, "getSelfRawNumber: subInfo is null for " + mSubId);
+
+            return null;
+        }
+
+        @Override
+        public SubscriptionInfo getActiveSubscriptionInfo() {
+            try {
+                final SubscriptionInfo subInfo =
+                        mSubscriptionManager.getActiveSubscriptionInfo(mSubId);
+                if (subInfo == null) {
+                    // This is possible if the sub id is no longer available.
+                    Log.d(TAG, "getActiveSubscriptionInfo(): empty sub info for " + mSubId);
+                }
+                return subInfo;
+            } catch (Exception e) {
+                Log.e(TAG, "getActiveSubscriptionInfo: system exception for " + mSubId, e);
+            }
+            return null;
         }
 
         @Override
