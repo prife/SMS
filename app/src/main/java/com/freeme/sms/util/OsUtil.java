@@ -14,13 +14,23 @@ import java.util.Hashtable;
  * Android OS version utilities
  */
 public class OsUtil {
+    private static boolean sIsAtLeastKLP;
     private static boolean sIsAtLeastL_MR1;
     private static boolean sIsAtLeastM;
 
     static {
         final int v = getApiVersion();
+        sIsAtLeastKLP = v >= android.os.Build.VERSION_CODES.KITKAT;
         sIsAtLeastL_MR1 = v >= Build.VERSION_CODES.LOLLIPOP_MR1;
         sIsAtLeastM = v >= Build.VERSION_CODES.M;
+    }
+
+    /**
+     * @return True if the version of Android that we're running on is at least KLP
+     * (API level 19).
+     */
+    public static boolean isAtLeastKLP() {
+        return sIsAtLeastKLP;
     }
 
     /**

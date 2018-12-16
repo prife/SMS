@@ -2,8 +2,10 @@ package com.freeme.sms.util;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Build;
+import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -87,6 +89,18 @@ public abstract class PhoneUtils {
     public abstract int getDefaultSmsSubscriptionId();
 
     /**
+     * For L_MR1, system may return a negative subId. Convert this into our own
+     * subId, so that we consistently use -1 for invalid or default.
+     * <p>
+     * see b/18629526 and b/18670346
+     *
+     * @param intent    The push intent from system
+     * @param extraName The name of the sub id extra
+     * @return the subId that is valid and meaningful for the app
+     */
+    public abstract int getEffectiveIncomingSubIdFromSystem(Intent intent, String extraName);
+
+    /**
      * Get the subscription_id column value from a telephony provider cursor
      *
      * @param cursor     The database query cursor
@@ -154,6 +168,12 @@ public abstract class PhoneUtils {
         @Override
         public int getDefaultSmsSubscriptionId() {
             Log.w(TAG, "getDefaultSmsSubscriptionId(): not supported before L MR1");
+            return DEFAULT_SELF_SUB_ID;
+        }
+
+        @Override
+        public int getEffectiveIncomingSubIdFromSystem(Intent intent, String extraName) {
+            // Pre-L_MR1 always returns the default id
             return DEFAULT_SELF_SUB_ID;
         }
 
@@ -256,6 +276,12 @@ public abstract class PhoneUtils {
         }
 
         @Override
+        public int getEffectiveIncomingSubIdFromSystem(Intent intent, String extraName) {
+            return getEffectiveIncomingSubIdFromSystem(intent.getIntExtra(extraName,
+                    DEFAULT_SELF_SUB_ID));
+        }
+
+        @Override
         public int getSubIdFromTelephony(Cursor cursor, int subIdIndex) {
             return getEffectiveIncomingSubIdFromSystem(cursor.getInt(subIdIndex));
         }
@@ -294,6 +320,51 @@ public abstract class PhoneUtils {
     public static PhoneUtils get(int subId) {
         return getPhoneUtils(subId);
     }
+
+
+    /**
+     * Check if this device supports SMS
+     *
+     * @return true if SMS is supported, false otherwise
+     */
+    public boolean isSmsCapable() {
+        return mTelephonyManager.isSmsCapable();
+    }
+
+    /**
+     * Is Messaging the default SMS app?
+     * - On KLP+ this checks the system setting.
+     * - On JB (and below) this always returns true, since the setting was added in KLP.
+     */
+    public boolean isDefaultSmsApp() {
+        if (OsUtil.isAtLeastKLP()) {
+            final String configuredApplication = Telephony.Sms.getDefaultSmsPackage(mContext);
+            return mContext.getPackageName().equals(configuredApplication);
+        }
+        return true;
+    }
+
+    /**
+     * Get default SMS app package name
+     *
+     * @return the package name of default SMS app
+     */
+    public String getDefaultSmsApp() {
+        if (OsUtil.isAtLeastKLP()) {
+            return Telephony.Sms.getDefaultSmsPackage(mContext);
+        }
+        return null;
+    }
+
+    /**
+     * Determines if SMS is currently enabled on this device.
+     * - Device must support SMS
+     * - On KLP+ we must be set as the default SMS app
+     */
+    public boolean isSmsEnabled() {
+        return isSmsCapable() && isDefaultSmsApp();
+    }
+
 
     private static PhoneUtils getPhoneUtils(int subId) {
         if (OsUtil.isAtLeastL_MR1()) {

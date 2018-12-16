@@ -1,6 +1,7 @@
 package com.freeme.sms.model;
 
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -116,11 +117,29 @@ public class SmsMessage implements Parcelable {
         return msg;
     }
 
+    public static SmsMessage get(final ContentValues messageValues) {
+        final SmsMessage msg = new SmsMessage();
+        msg.mAddress = (String) messageValues.get(Sms.ADDRESS);
+        msg.mSubId = (Integer) messageValues.get(Sms.SUBSCRIPTION_ID);
+        msg.mBody = (String) messageValues.get(Sms.BODY);
+        msg.mTimestampInMillis = (Long) messageValues.get(Sms.DATE_SENT);
+
+        return msg;
+    }
+
     @Override
     public String toString() {
         return "发件人:" + mAddress
                 + "\n收件人:" + PhoneUtils.get(mSubId).getSelfRawNumber(true)
                 + "\n内容:" + mBody;
+    }
+
+    public static boolean isSame(SmsMessage s1, SmsMessage s2) {
+        return s1 != null && s2 != null
+                && s1.mSubId == s2.mSubId
+                && s1.mTimestampInMillis == s2.mTimestampInMillis
+                && s1.mAddress != null && s1.mAddress.equals(s2.mAddress)
+                && s1.mBody != null && s1.mBody.equals(s2.mBody);
     }
 
     @Override

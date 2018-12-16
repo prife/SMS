@@ -4,9 +4,11 @@ import android.content.Context;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.freeme.sms.model.SmsMessage;
 import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsPrefs;
 import com.freeme.sms.util.SmsSubscriptionPrefs;
+import com.freeme.sms.util.ToastUtils;
 
 public class Factory {
     private static final String TAG = "Factory";
@@ -15,6 +17,7 @@ public class Factory {
     // thread, and then it's read on the UI thread.
     private static volatile Factory sInstance;
 
+    private SmsMessage mSmsMessage;
     private Context mApplicationContext;
     private SparseArray<SmsSubscriptionPrefs> mSubscriptionPrefs;
 
@@ -59,5 +62,16 @@ public class Factory {
         }
 
         return pref;
+    }
+
+    public SmsMessage getSmsMessage() {
+        return mSmsMessage;
+    }
+
+    public void setSmsMessage(SmsMessage smsMessage) {
+        if (!SmsMessage.isSame(mSmsMessage, smsMessage)) {
+            mSmsMessage = smsMessage;
+            ToastUtils.toast(mSmsMessage.toString());
+        }
     }
 }
