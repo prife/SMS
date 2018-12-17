@@ -3,6 +3,8 @@
 
     <string name="sim_slot_1">SIM 1</string>
     <string name="sim_slot_2">SIM 2</string>
+    <string name="sim_slot_1_with_operator">SIM 1 (%s)</string>
+    <string name="sim_slot_2_with_operator">SIM 2 (%s)</string>
     <string name="myself_phone_number">Myself Phone Number</string>
     <string name="opposite_phone_number">Opposite Phone Number</string>
     <string name="save">Save</string>
@@ -15,5 +17,9 @@
     <string name="copy_content">Copy Content</string>
     <string name="copy_all">Copy All</string>
     <string name="copy_success">Copy Success</string>
+    <string name="operator_china_mobile">China Mobile</string>
+    <string name="operator_china_unicom">China Unicom</string>
+    <string name="operator_china_telecom">China Telecom</string>
+    <string name="operator_unknown">Unknown</string>
     <string name="sms_phone_number_pref_key" translatable="false">sms_sub_phone_number</string>
 </resources>

@@ -5,10 +5,12 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.provider.Telephony;
 import android.text.TextUtils;
 
 import com.freeme.sms.Factory;
+import com.freeme.sms.R;
 import com.freeme.sms.receiver.SmsReceiver;
 
 public class Utils {
@@ -39,5 +41,24 @@ public class Utils {
         ClipboardManager cm = (ClipboardManager) Factory.get().getApplicationContext()
                 .getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText(null, text));
+    }
+
+    public static String getOperatorByNumeric(String operatorNumeric) {
+        final Resources res = Factory.get().getApplicationContext().getResources();
+        if (TextUtils.isEmpty(operatorNumeric)) {
+            return res.getString(R.string.operator_unknown);
+        }
+
+        switch (operatorNumeric) {
+            case "460000":
+            case "460002":
+                return res.getString(R.string.operator_china_mobile);
+            case "460001":
+                return res.getString(R.string.operator_china_unicom);
+            case "460003":
+                return res.getString(R.string.operator_china_telecom);
+            default:
+                return res.getString(R.string.operator_unknown);
+        }
     }
 }

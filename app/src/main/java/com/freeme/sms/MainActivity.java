@@ -317,20 +317,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 final int subId = info.getSubscriptionId();
                 String number = PhoneUtils.get(subId).getSelfRawNumber(true);
                 final TextInputLayout inputLayout;
+                final int operatorFormatRes;
                 switch (slotIndex) {
                     case PhoneUtils.SIM_SLOT_INDEX_1:
                         inputLayout = mInputLayoutSim1;
+                        operatorFormatRes = R.string.sim_slot_1_with_operator;
                         break;
                     case PhoneUtils.SIM_SLOT_INDEX_2:
                         inputLayout = mInputLayoutSim2;
+                        operatorFormatRes = R.string.sim_slot_2_with_operator;
                         break;
                     default:
                         inputLayout = null;
+                        operatorFormatRes = 0;
                         break;
                 }
 
                 if (inputLayout != null) {
                     inputLayout.setVisibility(View.VISIBLE);
+                    if (operatorFormatRes != 0) {
+                        String operatorNumeric = PhoneUtils.get(subId).getSimOperatorNumeric();
+                        String operator = Utils.getOperatorByNumeric(operatorNumeric);
+                        String hint = getString(operatorFormatRes, operator);
+                        inputLayout.setHint(hint);
+                    }
                     inputLayout.setTag(subId);
                     if (TextUtils.isEmpty(number)) {
                         inputLayout.getEditText().setText("");

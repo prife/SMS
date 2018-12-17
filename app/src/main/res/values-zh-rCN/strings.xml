@@ -4,6 +4,8 @@
 
     <string name="sim_slot_1">卡 1</string>
     <string name="sim_slot_2">卡 2</string>
+    <string name="sim_slot_1_with_operator">卡 1 (%s)</string>
+    <string name="sim_slot_2_with_operator">卡 2 (%s)</string>
     <string name="myself_phone_number">本机号码</string>
     <string name="opposite_phone_number">对方号码</string>
     <string name="save">保存</string>
@@ -16,4 +18,8 @@
     <string name="copy_all">全部复制</string>
     <string name="copy_success">复制成功</string>
     <string name="content">内容</string>
+    <string name="operator_china_mobile">中国移动</string>
+    <string name="operator_china_unicom">中国联通</string>
+    <string name="operator_china_telecom">中国电信</string>
+    <string name="operator_unknown">未知</string>
 </resources>

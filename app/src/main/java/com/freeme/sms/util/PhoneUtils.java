@@ -53,6 +53,20 @@ public abstract class PhoneUtils {
     public abstract boolean hasSim();
 
     /**
+     * Get the MCC and MNC in integer of the SIM's provider
+     *
+     * @return an array of two ints, [0] is the MCC code and [1] is the MNC code
+     */
+    public abstract int[] getMccMnc();
+
+    /**
+     * Get the mcc/mnc string
+     *
+     * @return the text of mccmnc string
+     */
+    public abstract String getSimOperatorNumeric();
+
+    /**
      * Get the SIM's self raw number, i.e. not canonicalized
      *
      * @param allowOverride Whether to use the app's setting to override the self number
@@ -145,6 +159,25 @@ public abstract class PhoneUtils {
         }
 
         @Override
+        public int[] getMccMnc() {
+            final String mccmnc = mTelephonyManager.getSimOperator();
+            int mcc = 0;
+            int mnc = 0;
+            try {
+                mcc = Integer.parseInt(mccmnc.substring(0, 3));
+                mnc = Integer.parseInt(mccmnc.substring(3));
+            } catch (Exception e) {
+                Log.w(TAG, "getMccMnc: invalid string " + mccmnc, e);
+            }
+            return new int[]{mcc, mnc};
+        }
+
+        @Override
+        public String getSimOperatorNumeric() {
+            return mTelephonyManager.getSimOperator();
+        }
+
+        @Override
         public String getSelfRawNumber(final boolean allowOverride) {
             if (allowOverride) {
                 final String userDefinedNumber = getNumberFromPrefs(mContext, DEFAULT_SELF_SUB_ID);
@@ -202,6 +235,24 @@ public abstract class PhoneUtils {
         @Override
         public boolean hasSim() {
             return mSubscriptionManager.getActiveSubscriptionInfoCount() > 0;
+        }
+
+        @Override
+        public int[] getMccMnc() {
+            int mcc = 0;
+            int mnc = 0;
+            final SubscriptionInfo subInfo = getActiveSubscriptionInfo();
+            if (subInfo != null) {
+                mcc = subInfo.getMcc();
+                mnc = subInfo.getMnc();
+            }
+            return new int[]{mcc, mnc};
+        }
+
+        @Override
+        public String getSimOperatorNumeric() {
+            // For L_MR1 we return the canonicalized (xxxxxx) string
+            return getMccMncString(getMccMnc());
         }
 
         @Override
@@ -411,5 +462,12 @@ public abstract class PhoneUtils {
             Log.w(TAG, "toLMr1(): invalid OS version");
             return null;
         }
+    }
+
+    public static String getMccMncString(int[] mccmnc) {
+        if (mccmnc == null || mccmnc.length != 2) {
+            return "000000";
+        }
+        return String.format("%03d%03d", mccmnc[0], mccmnc[1]);
     }
 }
