@@ -74,16 +74,19 @@ public class ConversationListItemView extends LinearLayout implements View.OnCli
 
         final Resources res = getResources();
         String oppositeText = mSmsMessage.mAddress;
-        mOppositeText.setText(res.getString(R.string.opposite_phone_number) + ":"
-                + Utils.nonNull(oppositeText));
+        mOppositeText.setText(res.getString(R.string.format_string,
+                res.getString(R.string.opposite_phone_number),
+                Utils.nonNull(oppositeText)));
 
         String myselfText = PhoneUtils.get(mSmsMessage.mSubId).getSelfRawNumber(true);
-        mMyselfText.setText(res.getString(R.string.myself_phone_number) + ":"
-                + Utils.nonNull(myselfText));
+        mMyselfText.setText(res.getString(R.string.format_string,
+                res.getString(R.string.myself_phone_number),
+                Utils.nonNull(myselfText)));
 
         String contentText = mSmsMessage.mBody;
-        mContentText.setText(res.getString(R.string.content) + ":"
-                + Utils.nonNull(contentText));
+        mContentText.setText(res.getString(R.string.format_string,
+                res.getString(R.string.content),
+                Utils.nonNull(contentText)));
     }
 
     public interface HostInterface {

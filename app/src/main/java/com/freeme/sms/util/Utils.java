@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.provider.Telephony;
 import android.text.TextUtils;
+import android.view.inputmethod.InputMethodManager;
 
 import com.freeme.sms.Factory;
 import com.freeme.sms.R;
@@ -59,6 +60,14 @@ public class Utils {
                 return res.getString(R.string.operator_china_telecom);
             default:
                 return res.getString(R.string.operator_unknown);
+        }
+    }
+
+    public static void closeKeyboard(Activity activity) {
+        InputMethodManager imm =
+                (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(activity.getWindow().getDecorView().getWindowToken(), 0);
         }
     }
 }

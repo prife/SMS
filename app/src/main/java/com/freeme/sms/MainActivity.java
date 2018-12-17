@@ -7,7 +7,6 @@ import android.os.Build;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -17,15 +16,9 @@ import android.provider.Telephony.Sms;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.telephony.SubscriptionInfo;
-import android.text.TextUtils;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import com.freeme.sms.base.DialogFragment;
 import com.freeme.sms.model.SmsMessage;
@@ -33,16 +26,15 @@ import com.freeme.sms.service.ReadSmsService;
 import com.freeme.sms.ui.ConversationListAdapter;
 import com.freeme.sms.ui.ConversationListItemView;
 import com.freeme.sms.ui.SpaceItemDecoration;
+import com.freeme.sms.ui.SubscriptionsNumberLayout;
 import com.freeme.sms.util.DialogFragmentHelper;
 import com.freeme.sms.util.OsUtil;
 import com.freeme.sms.util.PhoneUtils;
-import com.freeme.sms.util.SmsPrefs;
 import com.freeme.sms.util.SmsUtils;
+import com.freeme.sms.util.ToastUtils;
 import com.freeme.sms.util.Utils;
 
-import java.util.List;
-
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+public class MainActivity extends AppCompatActivity implements SubscriptionsNumberLayout.HostInterface,
         ConversationListItemView.HostInterface,
         LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "MainActivity";
@@ -59,13 +51,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             "conversationListViewState";
     private Parcelable mListState;
 
-    private TextView mNumberTitle;
-    private Button mSaveButton;
-    private TextInputLayout mInputLayoutSim1;
-    private TextInputLayout mInputLayoutSim2;
     private ConversationListItemView mLastSmsLayout;
     private RecyclerView mRecyclerView;
     private ConversationListAdapter mAdapter;
+    private SubscriptionsNumberLayout mSubscriptionsNumberLayout;
 
     private LoaderManager mLoaderManager;
 
@@ -110,59 +99,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private static final int MENU_ITEM_SETTING_NUMBER = 1;
-
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, MENU_ITEM_SETTING_NUMBER, MENU_ITEM_SETTING_NUMBER, R.string.myself_phone_number);
-        return true;
-    }
-
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        MenuItem item;
-        item = menu.findItem(MENU_ITEM_SETTING_NUMBER);
-        if (item != null) {
-            final boolean hasPhonePermission = OsUtil.hasPhonePermission();
-            final boolean visible = hasPhonePermission
-                    && PhoneUtils.getDefault().getActiveSubscriptionCount() > 0;
-            item.setVisible(visible);
-        }
-
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        final int id = item.getItemId();
-        switch (id) {
-            case MENU_ITEM_SETTING_NUMBER:
-                DialogFragmentHelper.showSmsSubscriptionsDialog(getSupportFragmentManager(), new DialogFragment.IDialogResultListener() {
-                    @Override
-                    public void onDataResult(Object result) {
-                        read();
-                    }
-                }, false);
-                break;
-            default:
-                break;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onClick(View v) {
-        final int id = v.getId();
-        switch (id) {
-            case R.id.btn_save:
-                savePhoneNumberFromInputLayout(mInputLayoutSim1);
-                savePhoneNumberFromInputLayout(mInputLayoutSim2);
-                read();
-                break;
-            default:
-                break;
-        }
+    public void editPhoneNumber() {
+        DialogFragmentHelper.showSmsSubscriptionsDialog(getSupportFragmentManager(), new DialogFragment.IDialogResultListener() {
+            @Override
+            public void onDataResult(Object result) {
+                ToastUtils.toast(R.string.save_success, Toast.LENGTH_SHORT);
+                mSubscriptionsNumberLayout.updatePhoneNumberLayout(false);
+                bindLastSmsLayout();
+                mAdapter.notifyDataSetChanged();
+            }
+        }, true);
     }
 
     @Override
@@ -249,11 +196,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initView() {
-        mNumberTitle = findViewById(R.id.tv_number_title);
-        mSaveButton = findViewById(R.id.btn_save);
-        mSaveButton.setOnClickListener(this);
-        mInputLayoutSim1 = findViewById(R.id.ti_sim1);
-        mInputLayoutSim2 = findViewById(R.id.ti_sim2);
+        mSubscriptionsNumberLayout = findViewById(R.id.number_layout);
         mLastSmsLayout = findViewById(R.id.last_sms_layout);
         mRecyclerView = findViewById(android.R.id.list);
 
@@ -304,71 +247,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         requestPermissions(missingPermissions, REQUIRED_PERMISSIONS_REQUEST_CODE);
     }
 
-    private void initPhoneNumberEditText() {
-        List<SubscriptionInfo> infoList = PhoneUtils.getDefault().toLMr1()
-                .getActiveSubscriptionInfoList();
-        final int count;
-        if (infoList != null && (count = infoList.size()) > 0) {
-            mNumberTitle.setVisibility(View.VISIBLE);
-            mSaveButton.setVisibility(View.VISIBLE);
-            for (int i = 0; i < count; i++) {
-                SubscriptionInfo info = infoList.get(i);
-                final int slotIndex = info.getSimSlotIndex();
-                final int subId = info.getSubscriptionId();
-                String number = PhoneUtils.get(subId).getSelfRawNumber(true);
-                final TextInputLayout inputLayout;
-                final int operatorFormatRes;
-                switch (slotIndex) {
-                    case PhoneUtils.SIM_SLOT_INDEX_1:
-                        inputLayout = mInputLayoutSim1;
-                        operatorFormatRes = R.string.sim_slot_1_with_operator;
-                        break;
-                    case PhoneUtils.SIM_SLOT_INDEX_2:
-                        inputLayout = mInputLayoutSim2;
-                        operatorFormatRes = R.string.sim_slot_2_with_operator;
-                        break;
-                    default:
-                        inputLayout = null;
-                        operatorFormatRes = 0;
-                        break;
-                }
-
-                if (inputLayout != null) {
-                    inputLayout.setVisibility(View.VISIBLE);
-                    if (operatorFormatRes != 0) {
-                        String operatorNumeric = PhoneUtils.get(subId).getSimOperatorNumeric();
-                        String operator = Utils.getOperatorByNumeric(operatorNumeric);
-                        String hint = getString(operatorFormatRes, operator);
-                        inputLayout.setHint(hint);
-                    }
-                    inputLayout.setTag(subId);
-                    if (TextUtils.isEmpty(number)) {
-                        inputLayout.getEditText().setText("");
-                    } else {
-                        inputLayout.getEditText().setText(number);
-                    }
-                }
-            }
-        }
-    }
-
-    private void savePhoneNumberFromInputLayout(TextInputLayout inputLayout) {
-        if (inputLayout != null && inputLayout.getVisibility() == View.VISIBLE) {
-            String number = inputLayout.getEditText().getText().toString();
-            final SmsPrefs subPrefs = Factory.get().getSubscriptionPrefs((Integer) inputLayout.getTag());
-            subPrefs.putString(Factory.get().getApplicationContext()
-                            .getString(R.string.sms_phone_number_pref_key),
-                    number);
-        }
-    }
-
     private void readSmsAfterEnterSelfNumber() {
-        initPhoneNumberEditText();
+        mSubscriptionsNumberLayout.updatePhoneNumberLayout(true);
+        mSubscriptionsNumberLayout.setHostInterface(this);
         startReadService();
-        read();
-    }
-
-    private void read() {
         if (mLoaderManager != null) {
             mLoaderManager.initLoader(CONVERSATION_LIST_LOADER, null, this);
         } else {

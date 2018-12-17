@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.freeme.sms.util.Utils;
+
 public class DialogFragment extends android.support.v4.app.DialogFragment {
     private OnCallDialog mOnCallDialog;
     private OnDialogCancelListener mCancelListener;
@@ -41,6 +43,12 @@ public class DialogFragment extends android.support.v4.app.DialogFragment {
         if (mCancelListener != null) {
             mCancelListener.onCancel();
         }
+    }
+
+    @Override
+    public void onDismiss(DialogInterface dialog) {
+        super.onDismiss(dialog);
+        Utils.closeKeyboard(getActivity());
     }
 
     public interface OnDialogCancelListener {

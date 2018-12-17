@@ -19,4 +19,9 @@
         <item name="android:textColor">@color/colorPrimary</item>
     </style>
 
+    <style name="TextViewStyle.Secondary">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/colorPrimaryDark</item>
+    </style>
+
 </resources>

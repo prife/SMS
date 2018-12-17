@@ -7,7 +7,9 @@
     <string name="sim_slot_2_with_operator">SIM 2 (%s)</string>
     <string name="myself_phone_number">Myself Phone Number</string>
     <string name="opposite_phone_number">Opposite Phone Number</string>
+    <string name="edit">Edit</string>
     <string name="save">Save</string>
+    <string name="save_success">Save Success</string>
     <string name="content">Content</string>
     <string name="last_sms">Last Sms</string>
     <string name="all_sms">All Sms</string>
@@ -21,5 +23,6 @@
     <string name="operator_china_unicom">China Unicom</string>
     <string name="operator_china_telecom">China Telecom</string>
     <string name="operator_unknown">Unknown</string>
+    <string name="format_string" translatable="false">%s : %s</string>
     <string name="sms_phone_number_pref_key" translatable="false">sms_sub_phone_number</string>
 </resources>
