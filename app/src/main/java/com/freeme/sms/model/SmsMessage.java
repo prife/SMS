@@ -129,9 +129,9 @@ public class SmsMessage implements Parcelable {
 
     @Override
     public String toString() {
-        return "发件人:" + mAddress
-                + "\n收件人:" + PhoneUtils.get(mSubId).getSelfRawNumber(true)
-                + "\n内容:" + mBody;
+        return "opposite number:" + mAddress
+                + "\nmyself number:" + PhoneUtils.get(mSubId).getSelfRawNumber(true)
+                + "\ncontent:" + mBody;
     }
 
     public static boolean isSame(SmsMessage s1, SmsMessage s2) {
@@ -140,6 +140,10 @@ public class SmsMessage implements Parcelable {
                 && s1.mTimestampInMillis == s2.mTimestampInMillis
                 && s1.mAddress != null && s1.mAddress.equals(s2.mAddress)
                 && s1.mBody != null && s1.mBody.equals(s2.mBody);
+    }
+
+    public boolean newerThen(SmsMessage s) {
+        return s != null && mTimestampInMillis > s.mTimestampInMillis;
     }
 
     @Override

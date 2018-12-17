@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/dp_16">
+
+    <TextView
+        android:id="@+id/tv_opposite"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_16"
+        android:textIsSelectable="true" />
+
+    <Button
+        android:id="@+id/btn_copy_opposite"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_8"
+        android:text="@string/copy_opposite_number" />
+
+    <TextView
+        android:id="@+id/tv_myself"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_16"
+        android:textIsSelectable="true" />
+
+    <Button
+        android:id="@+id/btn_copy_myself"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_8"
+        android:text="@string/copy_myself_number" />
+
+    <TextView
+        android:id="@+id/tv_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_16"
+        android:textIsSelectable="true" />
+
+    <Button
+        android:id="@+id/btn_copy_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_8"
+        android:text="@string/copy_content" />
+
+    <Button
+        android:id="@+id/btn_copy_all"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/dp_8"
+        android:text="@string/copy_all" />
+
+</LinearLayout>

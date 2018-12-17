@@ -16,7 +16,6 @@ import com.freeme.sms.service.NoConfirmationSmsSendService;
 import com.freeme.sms.util.OsUtil;
 import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsUtils;
-import com.freeme.sms.util.ToastUtils;
 
 /**
  * Class that receives incoming SMS messages through android.provider.Telephony.SMS_RECEIVED
@@ -156,7 +155,6 @@ public class SmsReceiver extends BroadcastReceiver {
         if (messages[0].getMessageClass() == android.telephony.SmsMessage.MessageClass.CLASS_0) {
             Log.d(TAG, "class_0");
         } else {
-            ToastUtils.toast("messageValues:" + messageValues);
             insert(context, messageValues);
         }
     }

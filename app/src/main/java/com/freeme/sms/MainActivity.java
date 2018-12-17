@@ -1,42 +1,50 @@
 package com.freeme.sms;
 
-import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteException;
 import android.os.Build;
+import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
 import android.support.design.widget.TextInputLayout;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.provider.Telephony.Sms;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.telephony.SubscriptionInfo;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
 import com.freeme.sms.base.DialogFragment;
 import com.freeme.sms.model.SmsMessage;
 import com.freeme.sms.service.ReadSmsService;
+import com.freeme.sms.ui.ConversationListAdapter;
+import com.freeme.sms.ui.ConversationListItemView;
+import com.freeme.sms.ui.SpaceItemDecoration;
 import com.freeme.sms.util.DialogFragmentHelper;
 import com.freeme.sms.util.OsUtil;
 import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsPrefs;
 import com.freeme.sms.util.SmsUtils;
-import com.freeme.sms.util.SqliteWrapper;
-import com.freeme.sms.util.ThreadPool;
 import com.freeme.sms.util.Utils;
 
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        ConversationListItemView.HostInterface,
+        LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "MainActivity";
 
     private static final int REQUIRED_PERMISSIONS_REQUEST_CODE = 1;
@@ -45,22 +53,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private static final String ORDER_BY_DATE_DESC = "date DESC";
 
-    private TextView mTextView;
+    // Saved Instance State Data - only for temporal data which is nice to maintain but not
+    // critical for correctness.
+    private static final String SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY =
+            "conversationListViewState";
+    private Parcelable mListState;
+
     private TextView mNumberTitle;
     private Button mSaveButton;
     private TextInputLayout mInputLayoutSim1;
     private TextInputLayout mInputLayoutSim2;
+    private ConversationListItemView mLastSmsLayout;
+    private RecyclerView mRecyclerView;
+    private ConversationListAdapter mAdapter;
+
+    private LoaderManager mLoaderManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mTextView = findViewById(R.id.tv_show);
-        mNumberTitle = findViewById(R.id.tv_number_title);
-        mSaveButton = findViewById(R.id.btn_save);
-        mSaveButton.setOnClickListener(this);
-        mInputLayoutSim1 = findViewById(R.id.ti_sim1);
-        mInputLayoutSim2 = findViewById(R.id.ti_sim2);
+        initView();
+
+        if (savedInstanceState != null) {
+            mListState = savedInstanceState.getParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY);
+        }
 
         if (hasRequiredPermissions()) {
             Utils.updateAppConfig(this);
@@ -70,11 +87,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         trySetAsDefaultSmsApp();
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        mListState = mRecyclerView.getLayoutManager().onSaveInstanceState();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (mListState != null) {
+            outState.putParcelable(SAVED_INSTANCE_STATE_LIST_VIEW_STATE_KEY, mListState);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mLoaderManager != null) {
+            mLoaderManager.destroyLoader(CONVERSATION_LIST_LOADER);
+            mLoaderManager = null;
+        }
+    }
+
     private static final int MENU_ITEM_SETTING_NUMBER = 1;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, MENU_ITEM_SETTING_NUMBER, MENU_ITEM_SETTING_NUMBER, R.string.phone_number);
+        menu.add(0, MENU_ITEM_SETTING_NUMBER, MENU_ITEM_SETTING_NUMBER, R.string.myself_phone_number);
         return true;
     }
 
@@ -126,6 +166,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
+    public void onConversationClicked(final SmsMessage smsMessage,
+                                      ConversationListItemView conversationView) {
+        DialogFragmentHelper.showSmsMessageCopyDialog(getSupportFragmentManager(), smsMessage, true);
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         switch (requestCode) {
             case REQUEST_SET_DEFAULT_SMS_APP:
@@ -148,6 +194,83 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 readSmsAfterEnterSelfNumber();
             }
         }
+    }
+
+    private static final int CONVERSATION_LIST_LOADER = 1;
+
+    @NonNull
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, @Nullable Bundle bundle) {
+        Log.v(TAG, "onCreateLoader:" + id);
+        Loader<Cursor> loader = null;
+        switch (id) {
+            case CONVERSATION_LIST_LOADER:
+                loader = new CursorLoader(this,
+                        Sms.CONTENT_URI,
+                        SmsMessage.getProjection(),
+                        SmsUtils.getSmsTypeSelectionSql(),
+                        null,
+                        ORDER_BY_DATE_DESC);
+                break;
+            default:
+                Log.w(TAG, "wrong loader id:" + id);
+                break;
+        }
+
+        return loader;
+    }
+
+    @Override
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor cursor) {
+        final int id = loader.getId();
+        Log.v(TAG, "onLoadFinished:" + id);
+        switch (id) {
+            case CONVERSATION_LIST_LOADER:
+                onConversationListCursorUpdated(cursor);
+                break;
+            default:
+                Log.w(TAG, "wrong loader id:" + id);
+                break;
+        }
+    }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
+        final int id = loader.getId();
+        Log.v(TAG, "onLoaderReset:" + id);
+        switch (id) {
+            case CONVERSATION_LIST_LOADER:
+                onConversationListCursorUpdated(null);
+                break;
+            default:
+                Log.w(TAG, "wrong loader id:" + id);
+                break;
+        }
+    }
+
+    private void initView() {
+        mNumberTitle = findViewById(R.id.tv_number_title);
+        mSaveButton = findViewById(R.id.btn_save);
+        mSaveButton.setOnClickListener(this);
+        mInputLayoutSim1 = findViewById(R.id.ti_sim1);
+        mInputLayoutSim2 = findViewById(R.id.ti_sim2);
+        mLastSmsLayout = findViewById(R.id.last_sms_layout);
+        mRecyclerView = findViewById(android.R.id.list);
+
+        mLoaderManager = getSupportLoaderManager();
+        mAdapter = new ConversationListAdapter(this, null, this);
+        final LinearLayoutManager manager = new LinearLayoutManager(this) {
+            @Override
+            public RecyclerView.LayoutParams generateDefaultLayoutParams() {
+                return new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+            }
+        };
+        mRecyclerView.setLayoutManager(manager);
+        mRecyclerView.addItemDecoration(new SpaceItemDecoration(this, 8));
+        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setAdapter(mAdapter);
     }
 
     private boolean trySetAsDefaultSmsApp() {
@@ -236,7 +359,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void read() {
-        readAllSms();
+        if (mLoaderManager != null) {
+            mLoaderManager.initLoader(CONVERSATION_LIST_LOADER, null, this);
+        } else {
+            Log.w(TAG, "loader manger is null.");
+        }
     }
 
     private void startReadService() {
@@ -244,62 +371,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startService(intent);
     }
 
-    @RequiresPermission(allOf = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS})
-    private void readAllSms() {
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                Cursor cursor = getSmsCursor(SmsUtils.getSmsTypeSelectionSql());
-                if (cursor != null) {
-                    StringBuilder sb = new StringBuilder();
-                    try {
-                        cursor.moveToPosition(-1);
-                        int index = 1;
-                        while (cursor.moveToNext()) {
-                            sb.append("sms-" + index++ + ":\n");
-                            SmsMessage smsMessage = SmsMessage.get(cursor);
-                            Log.d(TAG, "smsMessage = " + smsMessage);
-                            sb.append(smsMessage).append("\n");
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        try {
-                            cursor.close();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    final String msg = sb.toString();
-                    if (!TextUtils.isEmpty(msg)) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mTextView.setText(msg);
-                            }
-                        });
-                    }
-                }
-            }
-        });
+    private void onConversationListCursorUpdated(Cursor cursor) {
+        final Cursor oldCursor = mAdapter.swapCursor(cursor);
+        final boolean isEmpty = cursor == null || cursor.getCount() == 0;
+        Log.d(TAG, "updated, isEmpty=" + isEmpty);
+        if (mListState != null && cursor != null && oldCursor == null) {
+            mRecyclerView.getLayoutManager().onRestoreInstanceState(mListState);
+        }
+        bindLastSmsLayout();
     }
 
-    @RequiresPermission(allOf = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS})
-    private Cursor getSmsCursor(String smsSelection) {
-        Cursor smsCursor = null;
-
-        try {
-            smsCursor = SqliteWrapper.query(this,
-                    Sms.CONTENT_URI,
-                    SmsMessage.getProjection(),
-                    smsSelection,
-                    null /* selectionArgs */,
-                    ORDER_BY_DATE_DESC);
-        } catch (SQLiteException e) {
-            e.printStackTrace();
+    private void bindLastSmsLayout() {
+        SmsMessage smsMessage = Factory.get().getSmsMessage();
+        if (smsMessage == null) {
+            Log.d(TAG, "load last sms from factory is null");
+            if (mAdapter != null && mAdapter.getItemCount() > 0) {
+                Cursor cursor = (Cursor) mAdapter.getItem(0);
+                if (cursor != null) {
+                    smsMessage = SmsMessage.get(cursor);
+                }
+            }
         }
-
-        return smsCursor;
+        Log.d(TAG, "load last sms:" + smsMessage);
+        mLastSmsLayout.bind(smsMessage, this);
     }
 }

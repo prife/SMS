@@ -1,10 +1,14 @@
 package com.freeme.sms.util;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.provider.Telephony;
+import android.text.TextUtils;
 
+import com.freeme.sms.Factory;
 import com.freeme.sms.receiver.SmsReceiver;
 
 public class Utils {
@@ -21,5 +25,19 @@ public class Utils {
     public static void updateAppConfig(final Context context) {
         // Make sure we set the correct state for the SMS/MMS receivers
         SmsReceiver.updateSmsReceiveHandler(context);
+    }
+
+    public static String nonNull(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return "";
+        }
+
+        return text;
+    }
+
+    public static void copyToClipboard(String text) {
+        ClipboardManager cm = (ClipboardManager) Factory.get().getApplicationContext()
+                .getSystemService(Context.CLIPBOARD_SERVICE);
+        cm.setPrimaryClip(ClipData.newPlainText(null, text));
     }
 }

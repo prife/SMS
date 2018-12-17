@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SMS</string>
+
+    <string name="sim_slot_1">卡 1</string>
+    <string name="sim_slot_2">卡 2</string>
+    <string name="myself_phone_number">本机号码</string>
+    <string name="opposite_phone_number">对方号码</string>
+    <string name="save">保存</string>
+    <string name="last_sms">最新信息</string>
+    <string name="all_sms">所有信息</string>
+    <string name="copy">复制</string>
+    <string name="copy_opposite_number">复制对方号码</string>
+    <string name="copy_myself_number">复制本机号码</string>
+    <string name="copy_content">复制信息文本</string>
+    <string name="copy_all">全部复制</string>
+    <string name="copy_success">复制成功</string>
+    <string name="content">内容</string>
+</resources>

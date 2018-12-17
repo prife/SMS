@@ -8,7 +8,6 @@ import com.freeme.sms.model.SmsMessage;
 import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsPrefs;
 import com.freeme.sms.util.SmsSubscriptionPrefs;
-import com.freeme.sms.util.ToastUtils;
 
 public class Factory {
     private static final String TAG = "Factory";
@@ -69,9 +68,9 @@ public class Factory {
     }
 
     public void setSmsMessage(SmsMessage smsMessage) {
-        if (!SmsMessage.isSame(mSmsMessage, smsMessage)) {
+        if (smsMessage != null && smsMessage.newerThen(mSmsMessage)
+                && !SmsMessage.isSame(mSmsMessage, smsMessage)) {
             mSmsMessage = smsMessage;
-            ToastUtils.toast(mSmsMessage.toString());
         }
     }
 }

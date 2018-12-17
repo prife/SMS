@@ -3,7 +3,17 @@
 
     <string name="sim_slot_1">SIM 1</string>
     <string name="sim_slot_2">SIM 2</string>
-    <string name="phone_number">Myself Phone Number</string>
+    <string name="myself_phone_number">Myself Phone Number</string>
+    <string name="opposite_phone_number">Opposite Phone Number</string>
     <string name="save">Save</string>
+    <string name="content">Content</string>
+    <string name="last_sms">Last Sms</string>
+    <string name="all_sms">All Sms</string>
+    <string name="copy">Copy</string>
+    <string name="copy_opposite_number">Copy Opposite Number</string>
+    <string name="copy_myself_number">Copy Myself Number</string>
+    <string name="copy_content">Copy Content</string>
+    <string name="copy_all">Copy All</string>
+    <string name="copy_success">Copy Success</string>
     <string name="sms_phone_number_pref_key" translatable="false">sms_sub_phone_number</string>
 </resources>

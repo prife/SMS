@@ -11,11 +11,15 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.freeme.sms.Factory;
 import com.freeme.sms.R;
 import com.freeme.sms.base.DialogFragment;
 import com.freeme.sms.base.DialogFragment.IDialogResultListener;
+import com.freeme.sms.model.SmsMessage;
 
 import java.util.List;
 
@@ -67,7 +71,7 @@ public class DialogFragmentHelper {
                 fillPhoneNumber(sim1, subId1);
                 fillPhoneNumber(sim2, subId2);
 
-                builder.setTitle(R.string.phone_number)
+                builder.setTitle(R.string.myself_phone_number)
                         .setView(view);
 
                 builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
@@ -107,6 +111,72 @@ public class DialogFragmentHelper {
                                 .getString(R.string.sms_phone_number_pref_key),
                         newPhoneNumber);
             }
+        }, cancelable);
+
+        dialogFragment.show(fm, dialogFragment.getClass().getSimpleName());
+    }
+
+    public static void showSmsMessageCopyDialog(FragmentManager fm, final SmsMessage smsMessage,
+                                                final boolean cancelable) {
+        DialogFragment dialogFragment = DialogFragment.newInstance(new DialogFragment.OnCallDialog() {
+            @Override
+            public Dialog getDialog(Context context) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                View view = LayoutInflater.from(context).inflate(R.layout.layout_sms_message_detail, null);
+                final TextView oppositeTv = view.findViewById(R.id.tv_opposite);
+                oppositeTv.setText(Utils.nonNull(smsMessage.mAddress));
+
+                final TextView myselfTv = view.findViewById(R.id.tv_myself);
+                myselfTv.setText(Utils.nonNull(PhoneUtils.get(smsMessage.mSubId).getSelfRawNumber(true)));
+
+                final TextView contentTv = view.findViewById(R.id.tv_content);
+                contentTv.setText(Utils.nonNull(smsMessage.mBody));
+
+                final Button oppositeBtn = view.findViewById(R.id.btn_copy_opposite);
+                oppositeBtn.setOnClickListener(mClickListener);
+                final Button myselfBtn = view.findViewById(R.id.btn_copy_myself);
+                myselfBtn.setOnClickListener(mClickListener);
+                final Button contentBtn = view.findViewById(R.id.btn_copy_content);
+                contentBtn.setOnClickListener(mClickListener);
+                final Button allBtn = view.findViewById(R.id.btn_copy_all);
+                allBtn.setOnClickListener(mClickListener);
+
+                builder.setTitle(R.string.copy)
+                        .setView(view)
+                        .setPositiveButton(android.R.string.ok, null);
+
+                return builder.create();
+            }
+
+            private View.OnClickListener mClickListener = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final int id = v.getId();
+                    String text = null;
+                    switch (id) {
+                        case R.id.btn_copy_opposite:
+                            text = Utils.nonNull(smsMessage.mAddress);
+                            break;
+                        case R.id.btn_copy_myself:
+                            text = Utils.nonNull(PhoneUtils.get(smsMessage.mSubId)
+                                    .getSelfRawNumber(true));
+                            break;
+                        case R.id.btn_copy_content:
+                            text = Utils.nonNull(smsMessage.mBody);
+                            break;
+                        case R.id.btn_copy_all:
+                            text = smsMessage.toString();
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (text != null) {
+                        Utils.copyToClipboard(text);
+                        ToastUtils.toast(R.string.copy_success, Toast.LENGTH_SHORT);
+                    }
+                }
+            };
         }, cancelable);
 
         dialogFragment.show(fm, dialogFragment.getClass().getSimpleName());
