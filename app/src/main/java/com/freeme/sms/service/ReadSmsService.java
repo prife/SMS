@@ -9,20 +9,26 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Telephony;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.freeme.sms.Factory;
 import com.freeme.sms.model.SmsMessage;
-import com.freeme.sms.util.ThreadPool;
-import com.freeme.sms.util.ToastUtils;
 
 public class ReadSmsService extends Service {
+    private static final String TAG = "ReadSmsService";
     private static final String SMS_INBOX_URI = "content://sms/inbox";
+    private static final String SMS_RAW_URI = "content://sms/raw";
     private static final String SMS_URI = "content://sms";
 
     private ContentObserver mReadSmsObserver = new ContentObserver(new Handler()) {
         @Override
-        public void onChange(boolean selfChange) {
-            super.onChange(selfChange);
+        public void onChange(boolean selfChange, Uri uri) {
+            super.onChange(selfChange, uri);
+            if (uri != null && (uri.toString().contains(SMS_RAW_URI)
+                    || uri.toString().equals(SMS_URI))) {
+                Log.d(TAG, "uri = " + uri + ", which should't notify change");
+                return;
+            }
             Cursor cursor = getContentResolver().query(Uri.parse(SMS_INBOX_URI),
                     SmsMessage.getProjection(),
                     Telephony.Sms.READ + "=?", new String[]{"0"},
@@ -64,15 +70,30 @@ public class ReadSmsService extends Service {
     }
 
     private void getLastSmsFromCursor(final Cursor cursor) {
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (cursor != null) {
-                    cursor.moveToPosition(0);
-                    SmsMessage smsMessage = SmsMessage.get(cursor);
-                    Factory.get().setSmsMessage(smsMessage);
+        if (cursor != null) {
+            try {
+                if (cursor.moveToFirst()) {
+                    final int columnCount = cursor.getColumnCount();
+                    if (columnCount > 0) {
+                        SmsMessage smsMessage = SmsMessage.get(cursor);
+                        Factory.get().setSmsMessage(smsMessage);
+                    } else {
+                        Log.wtf(TAG, "cursor.getColumnCount()=" + columnCount);
+                    }
+                } else {
+                    Log.d(TAG, "getLastSmsFromCursor is empty");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "getLastSmsFromCursor error", e);
+            } finally {
+                try {
+                    cursor.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-        });
+        } else {
+            Log.d(TAG, "getLastSmsFromCursor is null");
+        }
     }
 }
