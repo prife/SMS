@@ -8,6 +8,9 @@
     <string name="sim_slot_2_with_operator">卡 2 (%s)</string>
     <string name="myself_phone_number">本机号码</string>
     <string name="opposite_phone_number">对方号码</string>
+    <string name="server_number">服务器号码</string>
+    <string name="echo_server">我是谁</string>
+    <string name="sending">正在发送...</string>
     <string name="edit">编辑</string>
     <string name="save">保存</string>
     <string name="save_success">保存成功</string>

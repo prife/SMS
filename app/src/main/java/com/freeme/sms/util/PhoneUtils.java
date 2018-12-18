@@ -124,6 +124,13 @@ public abstract class PhoneUtils {
     public abstract int getSubIdFromTelephony(Cursor cursor, int subIdIndex);
 
     /**
+     * Get {@link SmsManager} instance
+     *
+     * @return the relevant SmsManager instance based on OS version and subId
+     */
+    public abstract SmsManager getSmsManager();
+
+    /**
      * This interface packages methods should only compile on L_MR1.
      * This is needed to make unit tests happy when mockito tries to
      * mock these methods. Calling on these methods on L_MR1 requires
@@ -214,6 +221,11 @@ public abstract class PhoneUtils {
         public int getSubIdFromTelephony(Cursor cursor, int subIdIndex) {
             // No subscription_id column before L_MR1
             return DEFAULT_SELF_SUB_ID;
+        }
+
+        @Override
+        public SmsManager getSmsManager() {
+            return SmsManager.getDefault();
         }
     }
 
@@ -335,6 +347,11 @@ public abstract class PhoneUtils {
         @Override
         public int getSubIdFromTelephony(Cursor cursor, int subIdIndex) {
             return getEffectiveIncomingSubIdFromSystem(cursor.getInt(subIdIndex));
+        }
+
+        @Override
+        public SmsManager getSmsManager() {
+            return SmsManager.getSmsManagerForSubscriptionId(mSubId);
         }
 
         private int getEffectiveIncomingSubIdFromSystem(int subId) {

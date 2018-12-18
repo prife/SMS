@@ -143,7 +143,7 @@ public class SmsMessage implements Parcelable {
     }
 
     public boolean newerThen(SmsMessage s) {
-        return s != null && mTimestampInMillis > s.mTimestampInMillis;
+        return s == null || mTimestampInMillis > s.mTimestampInMillis;
     }
 
     @Override

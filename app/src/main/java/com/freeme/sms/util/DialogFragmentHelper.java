@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.freeme.sms.EchoServer;
 import com.freeme.sms.Factory;
 import com.freeme.sms.R;
 import com.freeme.sms.base.DialogFragment;
@@ -179,6 +180,95 @@ public class DialogFragmentHelper {
                     if (text != null) {
                         Utils.copyToClipboard(text);
                         ToastUtils.toast(R.string.copy_success, Toast.LENGTH_SHORT);
+                    }
+                }
+            };
+        }, cancelable);
+
+        dialogFragment.show(fm, dialogFragment.getClass().getSimpleName());
+    }
+
+    public static void showSendDialog(FragmentManager fm, boolean cancelable) {
+        final List<SubscriptionInfo> infoList = PhoneUtils.getDefault().toLMr1()
+                .getActiveSubscriptionInfoList();
+        final int count;
+        if (infoList == null || (count = infoList.size()) <= 0) {
+            Log.w(TAG, "showSendDialog: no Active SubscriptionInfo");
+            return;
+        }
+
+        DialogFragment dialogFragment = DialogFragment.newInstance(new DialogFragment.OnCallDialog() {
+            @Override
+            public Dialog getDialog(Context context) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                View view = LayoutInflater.from(context).inflate(R.layout.layout_send_sms, null);
+                final TextInputLayout server = view.findViewById(R.id.ti_server);
+                final String serverNumber = EchoServer.getServerNumber(true);
+                server.getEditText().setText(serverNumber);
+
+                Button sim1 = view.findViewById(R.id.btn_sim1);
+                Button sim2 = view.findViewById(R.id.btn_sim2);
+                initSendButton(sim1, sim2);
+
+                builder.setTitle(R.string.echo_server)
+                        .setView(view)
+                        .setPositiveButton(R.string.save, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String number = server.getEditText().getText().toString();
+                                EchoServer.saveServerNumber(number);
+                                ToastUtils.toast(R.string.save_success, Toast.LENGTH_SHORT);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null);
+
+                return builder.create();
+            }
+
+            private void initSendButton(Button sim1, Button sim2) {
+                for (int i = 0; i < count; i++) {
+                    SubscriptionInfo info = infoList.get(i);
+                    final int slotIndex = info.getSimSlotIndex();
+                    final int subId = info.getSubscriptionId();
+                    final Button sendButton;
+                    switch (slotIndex) {
+                        case PhoneUtils.SIM_SLOT_INDEX_1:
+                            sendButton = sim1;
+                            break;
+                        case PhoneUtils.SIM_SLOT_INDEX_2:
+                            sendButton = sim2;
+                            break;
+                        default:
+                            sendButton = null;
+                            break;
+                    }
+
+                    if (sendButton != null) {
+                        sendButton.setTag(subId);
+                        sendButton.setVisibility(View.VISIBLE);
+                        sendButton.setOnClickListener(mClickListener);
+                    }
+                }
+            }
+
+            private View.OnClickListener mClickListener = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final int id = v.getId();
+                    final int subId;
+                    switch (id) {
+                        case R.id.btn_sim1:
+                        case R.id.btn_sim2:
+                            subId = (Integer) v.getTag();
+                            break;
+                        default:
+                            subId = PhoneUtils.DEFAULT_SELF_SUB_ID;
+                            break;
+                    }
+                    if (subId != PhoneUtils.DEFAULT_SELF_SUB_ID) {
+                        EchoServer.sendToServer(subId);
+                    } else {
+                        Log.w(TAG, "check subId=" + subId);
                     }
                 }
             };

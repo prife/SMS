@@ -7,6 +7,9 @@
     <string name="sim_slot_2_with_operator">SIM 2 (%s)</string>
     <string name="myself_phone_number">Myself Phone Number</string>
     <string name="opposite_phone_number">Opposite Phone Number</string>
+    <string name="server_number">Server Number</string>
+    <string name="echo_server">Who Am I</string>
+    <string name="sending">sending...</string>
     <string name="edit">Edit</string>
     <string name="save">Save</string>
     <string name="save_success">Save Success</string>

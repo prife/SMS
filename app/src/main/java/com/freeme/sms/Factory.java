@@ -16,6 +16,7 @@ public class Factory {
     // thread, and then it's read on the UI thread.
     private static volatile Factory sInstance;
 
+    private SmsPrefs mSmsPrefs;
     private SmsMessage mSmsMessage;
     private Context mApplicationContext;
     private SparseArray<SmsSubscriptionPrefs> mSubscriptionPrefs;
@@ -39,6 +40,7 @@ public class Factory {
 
             factory.mApplicationContext = applicationContext;
             factory.mSubscriptionPrefs = new SparseArray<>();
+            factory.mSmsPrefs = new SmsPrefs(applicationContext);
         } else {
             Log.w(TAG, "sRegistered=" + sRegistered + ", sInstance=" + sInstance);
         }
@@ -46,6 +48,10 @@ public class Factory {
 
     public Context getApplicationContext() {
         return mApplicationContext;
+    }
+
+    public SmsPrefs getSmsPrefs() {
+        return mSmsPrefs;
     }
 
     public SmsPrefs getSubscriptionPrefs(int subId) {
@@ -71,6 +77,13 @@ public class Factory {
         if (smsMessage != null && smsMessage.newerThen(mSmsMessage)
                 && !SmsMessage.isSame(mSmsMessage, smsMessage)) {
             mSmsMessage = smsMessage;
+            if (EchoServer.performRequest(smsMessage)) {
+                Log.d(TAG, "performRequest done");
+            } else if (EchoServer.echoWhoAmI(smsMessage)) {
+                Log.d(TAG, "echoWhoAmI done");
+            } else {
+                Log.d(TAG, "do nothing!");
+            }
         }
     }
 }

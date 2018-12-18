@@ -92,6 +92,16 @@
             </intent-filter>
         </receiver>
 
+        <receiver android:name=".receiver.MySmsReceiver">
+            <intent-filter>
+                <action android:name="freeme.action.intent.SEND_SMS" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="freeme.action.intent.DELIVERED_SMS" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".service.NoConfirmationSmsSendService"
             android:exported="true"

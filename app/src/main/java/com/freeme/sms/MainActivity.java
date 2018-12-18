@@ -17,6 +17,8 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
@@ -97,6 +99,33 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
             mLoaderManager.destroyLoader(CONVERSATION_LIST_LOADER);
             mLoaderManager = null;
         }
+    }
+
+    private static final int MENU_SEND_TO_ECHO_SERVER = 1;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, MENU_SEND_TO_ECHO_SERVER, 0, R.string.echo_server);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        final int id = item.getItemId();
+        switch (id) {
+            case MENU_SEND_TO_ECHO_SERVER:
+                DialogFragmentHelper.showSendDialog(getSupportFragmentManager(), true);
+                return true;
+            default:
+                break;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
