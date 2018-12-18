@@ -128,6 +128,9 @@ public class OsUtil {
             Manifest.permission.READ_SMS,
             // Required for knowing the phone number, number of SIMs, etc.
             Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.INTERNET
     };
 
     /**
