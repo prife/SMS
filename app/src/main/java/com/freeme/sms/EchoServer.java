@@ -1,5 +1,8 @@
 package com.freeme.sms;
 
+import android.content.Context;
+import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
@@ -14,7 +17,9 @@ public class EchoServer {
     private static final String KEY_SERVER_NUMBER = "server_number";
 
     private static final String CMD_REQUEST_WHO_AM_I = "CMD#REQUEST#WHO#AM#I";
-    private static final String CMD_ECHO_WHO_AM_I = "CMD#ECHO#WHO#AM#I#";
+    private static final String CMD_ECHO_I_AM = "CMD#ECHO#I#AM#";
+
+    public static final String ACTION_UPDATE_MYSELF_NUMBER = "freeme.action.intent.UPDATE_MYSELF_NUMBER";
 
     public static String getServerNumber(final boolean allowOverride) {
         String serverNumber = "";
@@ -57,34 +62,38 @@ public class EchoServer {
 
         String address = smsMessage.mAddress;
         int subId = smsMessage.mSubId;
-        String message = CMD_ECHO_WHO_AM_I + address;
-        Log.d(TAG, "address=" + address + ", subId = " + subId + "message:" + message);
+        String message = CMD_ECHO_I_AM + address;
+        Log.d(TAG, "address=" + address + ", subId = " + subId + ", message:" + message);
         SmsSender.getInstance(Factory.get().getApplicationContext())
                 .sendSms(address, message, subId);
-        ToastUtils.toast(R.string.sending, Toast.LENGTH_SHORT);
+        String toast = Factory.get().getApplicationContext().getString(R.string.sending_to, address);
+        ToastUtils.toast(toast, Toast.LENGTH_LONG);
 
         return true;
     }
 
-    public static boolean echoWhoAmI(SmsMessage smsMessage) {
+    public static boolean echoIAm(SmsMessage smsMessage) {
         if (smsMessage == null) {
-            Log.w(TAG, "echoWhoAmI sms message is null");
+            Log.w(TAG, "echoIAm sms message is null");
             return false;
         }
 
-        if (smsMessage.mBody == null || !smsMessage.mBody.startsWith(CMD_ECHO_WHO_AM_I)) {
-            Log.w(TAG, "echoWhoAmI sms message not echo.");
+        if (smsMessage.mBody == null || !smsMessage.mBody.startsWith(CMD_ECHO_I_AM)) {
+            Log.w(TAG, "echoIAm sms message not echo.");
             return false;
         }
 
-        String address = smsMessage.mAddress;
         int subId = smsMessage.mSubId;
-        String mySelfNumber = smsMessage.mBody.replaceFirst(CMD_ECHO_WHO_AM_I, "");
+        String mySelfNumber = smsMessage.mBody.replaceFirst(CMD_ECHO_I_AM, "");
         final SmsPrefs subPrefs = Factory.get().getSubscriptionPrefs(subId);
         subPrefs.putString(Factory.get().getApplicationContext()
                         .getString(R.string.sms_phone_number_pref_key),
                 mySelfNumber);
-        ToastUtils.toast("已保存" + mySelfNumber);
+
+        final Context context = Factory.get().getApplicationContext();
+        LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(ACTION_UPDATE_MYSELF_NUMBER));
+        String toast = context.getString(R.string.saved, mySelfNumber);
+        ToastUtils.toast(toast, Toast.LENGTH_LONG);
 
         return true;
     }

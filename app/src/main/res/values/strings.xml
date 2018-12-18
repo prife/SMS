@@ -10,8 +10,10 @@
     <string name="server_number">Server Number</string>
     <string name="echo_server">Who Am I</string>
     <string name="sending">sending...</string>
+    <string name="sending_to">sending to %s...</string>
     <string name="edit">Edit</string>
     <string name="save">Save</string>
+    <string name="saved">Saved %s</string>
     <string name="save_success">Save Success</string>
     <string name="content">Content</string>
     <string name="last_sms">Last Sms</string>

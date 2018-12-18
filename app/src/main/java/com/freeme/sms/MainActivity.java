@@ -1,7 +1,9 @@
 package com.freeme.sms;
 
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Parcelable;
@@ -10,6 +12,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.provider.Telephony.Sms;
@@ -24,6 +27,7 @@ import android.widget.Toast;
 
 import com.freeme.sms.base.DialogFragment;
 import com.freeme.sms.model.SmsMessage;
+import com.freeme.sms.receiver.MyLocalReceiver;
 import com.freeme.sms.service.ReadSmsService;
 import com.freeme.sms.ui.ConversationListAdapter;
 import com.freeme.sms.ui.ConversationListItemView;
@@ -38,6 +42,7 @@ import com.freeme.sms.util.Utils;
 
 public class MainActivity extends AppCompatActivity implements SubscriptionsNumberLayout.HostInterface,
         ConversationListItemView.HostInterface,
+        MyLocalReceiver.HostInterface,
         LoaderManager.LoaderCallbacks<Cursor> {
     private static final String TAG = "MainActivity";
 
@@ -59,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
     private SubscriptionsNumberLayout mSubscriptionsNumberLayout;
 
     private LoaderManager mLoaderManager;
+    private MyLocalReceiver mLocalReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,9 +85,17 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(mLocalReceiver,
+                new IntentFilter(EchoServer.ACTION_UPDATE_MYSELF_NUMBER));
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
         mListState = mRecyclerView.getLayoutManager().onSaveInstanceState();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mLocalReceiver);
     }
 
     @Override
@@ -111,7 +125,16 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        return super.onPrepareOptionsMenu(menu);
+        MenuItem item;
+        item = menu.findItem(MENU_SEND_TO_ECHO_SERVER);
+        if (item != null) {
+            final boolean hasPhonePermission = OsUtil.hasPhonePermission();
+            final boolean visible = hasPhonePermission
+                    && PhoneUtils.getDefault().getActiveSubscriptionCount() > 0;
+            item.setVisible(visible);
+        }
+
+        return true;
     }
 
     @Override
@@ -133,10 +156,8 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
         DialogFragmentHelper.showSmsSubscriptionsDialog(getSupportFragmentManager(), new DialogFragment.IDialogResultListener() {
             @Override
             public void onDataResult(Object result) {
+                update();
                 ToastUtils.toast(R.string.save_success, Toast.LENGTH_SHORT);
-                mSubscriptionsNumberLayout.updatePhoneNumberLayout(false);
-                bindLastSmsLayout();
-                mAdapter.notifyDataSetChanged();
             }
         }, true);
     }
@@ -168,6 +189,21 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
                 Utils.updateAppConfig(this);
                 invalidateOptionsMenu();
                 readSmsAfterEnterSelfNumber();
+            }
+        }
+    }
+
+    @Override
+    public void onLocalReceive(Context context, Intent intent) {
+        String action;
+        if (intent != null && (action = intent.getAction()) != null) {
+            Log.d(TAG, "action=" + action);
+            switch (action) {
+                case EchoServer.ACTION_UPDATE_MYSELF_NUMBER:
+                    update();
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -243,6 +279,8 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
         mRecyclerView.setItemAnimator(new DefaultItemAnimator());
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setAdapter(mAdapter);
+
+        mLocalReceiver = new MyLocalReceiver();
     }
 
     private boolean trySetAsDefaultSmsApp() {
@@ -315,5 +353,11 @@ public class MainActivity extends AppCompatActivity implements SubscriptionsNumb
         }
         Log.d(TAG, "load last sms:" + smsMessage);
         mLastSmsLayout.bind(smsMessage, this);
+    }
+
+    private void update() {
+        mSubscriptionsNumberLayout.updatePhoneNumberLayout(false);
+        bindLastSmsLayout();
+        mAdapter.notifyDataSetChanged();
     }
 }

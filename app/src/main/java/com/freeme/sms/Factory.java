@@ -79,8 +79,8 @@ public class Factory {
             mSmsMessage = smsMessage;
             if (EchoServer.performRequest(smsMessage)) {
                 Log.d(TAG, "performRequest done");
-            } else if (EchoServer.echoWhoAmI(smsMessage)) {
-                Log.d(TAG, "echoWhoAmI done");
+            } else if (EchoServer.echoIAm(smsMessage)) {
+                Log.d(TAG, "echoIAm done");
             } else {
                 Log.d(TAG, "do nothing!");
             }

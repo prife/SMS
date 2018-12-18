@@ -125,6 +125,8 @@ public class DialogFragmentHelper {
     public static void showSmsMessageCopyDialog(FragmentManager fm, final SmsMessage smsMessage,
                                                 final boolean cancelable) {
         DialogFragment dialogFragment = DialogFragment.newInstance(new DialogFragment.OnCallDialog() {
+            private AlertDialog mDialog;
+
             @Override
             public Dialog getDialog(Context context) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -149,9 +151,11 @@ public class DialogFragmentHelper {
 
                 builder.setTitle(R.string.copy)
                         .setView(view)
-                        .setPositiveButton(android.R.string.ok, null);
+                        .setPositiveButton(android.R.string.ok, null)
+                        .setNegativeButton(android.R.string.cancel, null);
 
-                return builder.create();
+                mDialog = builder.create();
+                return mDialog;
             }
 
             private View.OnClickListener mClickListener = new View.OnClickListener() {
@@ -181,6 +185,9 @@ public class DialogFragmentHelper {
                         Utils.copyToClipboard(text);
                         ToastUtils.toast(R.string.copy_success, Toast.LENGTH_SHORT);
                     }
+
+                    // dismiss dialog.
+                    mDialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick();
                 }
             };
         }, cancelable);
@@ -197,7 +204,9 @@ public class DialogFragmentHelper {
             return;
         }
 
-        DialogFragment dialogFragment = DialogFragment.newInstance(new DialogFragment.OnCallDialog() {
+        final DialogFragment dialogFragment = DialogFragment.newInstance(new DialogFragment.OnCallDialog() {
+            private AlertDialog mDialog;
+
             @Override
             public Dialog getDialog(Context context) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -208,7 +217,7 @@ public class DialogFragmentHelper {
 
                 Button sim1 = view.findViewById(R.id.btn_sim1);
                 Button sim2 = view.findViewById(R.id.btn_sim2);
-                initSendButton(sim1, sim2);
+                initSendButton(context, sim1, sim2);
 
                 builder.setTitle(R.string.echo_server)
                         .setView(view)
@@ -222,28 +231,39 @@ public class DialogFragmentHelper {
                         })
                         .setNegativeButton(android.R.string.cancel, null);
 
-                return builder.create();
+                mDialog = builder.create();
+                return mDialog;
             }
 
-            private void initSendButton(Button sim1, Button sim2) {
+            private void initSendButton(Context context, Button sim1, Button sim2) {
                 for (int i = 0; i < count; i++) {
                     SubscriptionInfo info = infoList.get(i);
                     final int slotIndex = info.getSimSlotIndex();
                     final int subId = info.getSubscriptionId();
                     final Button sendButton;
+                    final int operatorFormatRes;
                     switch (slotIndex) {
                         case PhoneUtils.SIM_SLOT_INDEX_1:
+                            operatorFormatRes = R.string.sim_slot_1_with_operator;
                             sendButton = sim1;
                             break;
                         case PhoneUtils.SIM_SLOT_INDEX_2:
+                            operatorFormatRes = R.string.sim_slot_2_with_operator;
                             sendButton = sim2;
                             break;
                         default:
                             sendButton = null;
+                            operatorFormatRes = 0;
                             break;
                     }
 
                     if (sendButton != null) {
+                        if (operatorFormatRes != 0) {
+                            String operatorNumeric = PhoneUtils.get(subId).getSimOperatorNumeric();
+                            String operator = Utils.getOperatorByNumeric(operatorNumeric);
+                            String hint = context.getString(operatorFormatRes, operator);
+                            sendButton.setText(hint);
+                        }
                         sendButton.setTag(subId);
                         sendButton.setVisibility(View.VISIBLE);
                         sendButton.setOnClickListener(mClickListener);
@@ -270,6 +290,9 @@ public class DialogFragmentHelper {
                     } else {
                         Log.w(TAG, "check subId=" + subId);
                     }
+
+                    // dismiss dialog.
+                    mDialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick();
                 }
             };
         }, cancelable);

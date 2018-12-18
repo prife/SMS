@@ -11,8 +11,10 @@
     <string name="server_number">服务器号码</string>
     <string name="echo_server">我是谁</string>
     <string name="sending">正在发送...</string>
+    <string name="sending_to">正在发送到 %s...</string>
     <string name="edit">编辑</string>
     <string name="save">保存</string>
+    <string name="saved">已保存 %s</string>
     <string name="save_success">保存成功</string>
     <string name="last_sms">最新信息</string>
     <string name="all_sms">所有信息</string>
