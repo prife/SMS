@@ -58,6 +58,8 @@ public class Utils {
                 return res.getString(R.string.operator_china_unicom);
             case "460003":
                 return res.getString(R.string.operator_china_telecom);
+            case "46000":
+                return res.getString(R.string.operator_china_telecom);
             default:
                 return res.getString(R.string.operator_unknown);
         }
