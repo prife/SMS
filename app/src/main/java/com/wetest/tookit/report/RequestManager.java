@@ -287,7 +287,7 @@ public class RequestManager {
     public void report(Context context, SmsMessage smsMessage) {
         String reportStr = makeJsonBody(PhoneUtils.get(
                 smsMessage.mSubId).getSelfRawNumber(true), smsMessage.mBody);
-        if (context == null || reportStr == null || reportStr.isEmpty()) {
+        if (reportStr == null || reportStr.isEmpty()) {
             Logger.getLogger().error("error: context=" + context + "reportStr=" + reportStr);
             return;
         }

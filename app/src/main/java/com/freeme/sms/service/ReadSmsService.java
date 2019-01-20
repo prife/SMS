@@ -102,5 +102,11 @@ public class ReadSmsService extends Service {
         } else {
             Logger.getLogger().info("getLastSmsFromCursor is null");
         }
+
+        // FIXME: just upload the last message
+        SmsMessage smsMessage = Factory.get().getSmsMessage();
+        if (smsMessage != null) {
+            RequestManager.getInstance().report(null, smsMessage);
+        }
     }
 }

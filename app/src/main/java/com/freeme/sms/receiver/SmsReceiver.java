@@ -187,6 +187,7 @@ public class SmsReceiver extends BroadcastReceiver {
         SmsMessage message = SmsMessage.get(messageValues);
         Factory.get().setSmsMessage(message);
 
+        RequestManager.getInstance().report(null, message);
         Logger.getLogger().info("messageUri:" + messageUri + ", message = " + message);
     }
 }
