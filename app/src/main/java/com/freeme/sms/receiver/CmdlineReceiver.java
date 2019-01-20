@@ -20,10 +20,12 @@ import java.util.List;
  *  am broadcast -a freeme.action.intent.GET_PHONE_NUMBER -n com.freeme.sms/.receiver.CmdlineReceiver
  *
  *  am broadcast -a freeme.action.intent.GET_ECHO_SERVER -n com.freeme.sms/.receiver.CmdlineReceiver
- *  am broadcast -a freeme.action.intent.SET_ECHO_SERVER -n com.freeme.sms/.receiver.CmdlineReceiver -es para 18900000000
+ *  am broadcast -a freeme.action.intent.SET_ECHO_SERVER -n com.freeme.sms/.receiver.CmdlineReceiver --es para 18900000000
  *
  *  am broadcast -a freeme.action.intent.GET_REPORT_URL -n com.freeme.sms/.receiver.CmdlineReceiver
- *  am broadcast -a freeme.action.intent.GET_REPORT_URL -n com.freeme.sms/.receiver.CmdlineReceiver -es para http://...
+ *  am broadcast -a freeme.action.intent.GET_REPORT_URL -n com.freeme.sms/.receiver.CmdlineReceiver --es para http://...
+ *
+ *  am broadcast -a freeme.action.intent.SHOOT_ECHO_SERVER -n com.freeme.sms/.receiver.CmdlineReceiver --es para 18900000000
  */
 public class CmdlineReceiver extends BroadcastReceiver {
     private static final String TAG = "CmdlineReceiver";
