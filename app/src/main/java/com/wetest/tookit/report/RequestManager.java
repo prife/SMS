@@ -4,8 +4,11 @@ import android.content.Context;
 import android.net.SSLCertificateSocketFactory;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Log;
 
+import com.freeme.sms.Factory;
+import com.freeme.sms.R;
 import com.freeme.sms.model.SmsMessage;
 import com.freeme.sms.util.PhoneUtils;
 import com.wetest.tookit.log.Logger;
@@ -15,8 +18,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,6 +39,7 @@ import javax.net.ssl.SSLSession;
 
 public class RequestManager {
     private static final String TAG = "wetestsms";
+    private static final String KEY_REPORT_URL = "def_report_url";
 
     private static final RequestManager myInstance = new RequestManager();
 
@@ -133,7 +135,7 @@ public class RequestManager {
                     try {
                         inputStream.close();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        // ignore
                     }
                 }
             }
@@ -208,44 +210,53 @@ public class RequestManager {
     }
 
     public String makeJsonBody(String phonenumber, String textmsg) {
+        Log.i(TAG, "phonenumber: " + phonenumber + " textmsg: " + textmsg);
+
+        ReportSmsMsgRequest data = new ReportSmsMsgRequest();
+        //data.setSecretId("ckdywKId9idmcPMJHUYsMPQ9qm");
+        String secretkey = "ckdywKId9idmcPMJHUYsMPQ9qm";
+        data.setSecretId("wetest_cloud");
+        data.setT((int) (System.currentTimeMillis() / 1000));
+        Random random = new Random(System.currentTimeMillis());
+        int r = random.nextInt(1000000000);
+        data.setR(r);
+        ArrayList<String> arr = new ArrayList<>();
+        arr.add(data.getSecretId());
+        arr.add(secretkey);
+        arr.add(Long.toString(data.getT()));
+        arr.add(Long.toString(data.getR()));
+        Collections.sort(arr);
+        String tmp = "";
+        for (int i = 0; i < arr.size(); i++) {
+            tmp += arr.get(i);
+        }
+        Log.i(TAG, "param str: " + tmp);
+
+        MessageDigest digest = null;
         try {
-            Log.i(TAG, "<wetest> phonenumber: " + phonenumber + " textmsg: " + textmsg);
-            ReportSmsMsgRequest data = new ReportSmsMsgRequest();
-            //data.setSecretid("ckdywKId9idmcPMJHUYsMPQ9qm");
-            String secretkey = "ckdywKId9idmcPMJHUYsMPQ9qm";
-            data.setSecretid("wetest_cloud");
-            data.setT((int) (System.currentTimeMillis() / 1000));
-            Random random = new Random(System.currentTimeMillis());
-            int r = random.nextInt(1000000000);
-            data.setR(r);
-            ArrayList<String> arr = new ArrayList<String>();
-            arr.add(data.getSecretid());
-            arr.add(secretkey);
-            arr.add(Long.toString(data.getT()));
-            arr.add(Long.toString(data.getR()));
-            Collections.sort(arr);
-            String tmp = "";
-            for (int i = 0; i < arr.size(); i++) {
-                tmp += arr.get(i);
-            }
-            Log.i(TAG, "<wetest> param str: " + tmp);
-            MessageDigest digest = null;
             digest = MessageDigest.getInstance("SHA-1");
-            byte[] bytes = digest.digest(tmp.getBytes());
-            String sha1Str = byteArrayToHexString(bytes);
-            Log.i(TAG, "<wetest> sign str: " + sha1Str);
-            data.setSign(sha1Str);
-            data.setTime(data.getT());
-            data.setPhonenumber(phonenumber);
-            data.setTextmsg(textmsg);
-            JSONObject body = data.toJSON();
-            Log.i(TAG, "<wetest> post str: " + body.toString());
-            Logger.getLogger().info("<wetest> makeJsonBody: " + body.toString());
-            return "secretid=" + data.getSecretid() + "&t=" + data.getT() + "&r=" + data.getR() + "&sign=" + data.getSign() + "&time=" + data.getTime() + "&phonenumber=" + URLEncoder.encode(data.getPhonenumber()) + "&textmsg=" + URLEncoder.encode(data.getTextmsg());
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            Log.e(TAG, "NoSuchAlgorithmException", e);
             return null;
         }
+
+        byte[] bytes = digest.digest(tmp.getBytes());
+        String sha1Str = byteArrayToHexString(bytes);
+        Log.i(TAG, "sign str: " + sha1Str);
+        data.setSign(sha1Str);
+        data.setTime(data.getT());
+        data.setPhoneNumber(phonenumber);
+        data.setTextMsg(textmsg);
+        JSONObject body = data.toJSON(ReportSmsMsgRequest.MSG_TYPE.NORMAL);
+        Log.i(TAG, "post str: " + body.toString());
+        Logger.getLogger().info("makeJsonBody: " + body.toString());
+        return "secretid=" + data.getSecretId() +
+                "&t=" + data.getT() +
+                "&r=" + data.getR() +
+                "&sign=" + data.getSign() +
+                "&time=" + data.getTime() +
+                "&phonenumber=" + URLEncoder.encode(data.getPhoneNumber()) +
+                "&textmsg=" + URLEncoder.encode(data.getTextMsg());
     }
 
     private static String byteArrayToHexString(final byte[] bytes) {
@@ -256,48 +267,33 @@ public class RequestManager {
         return sb.toString();
     }
 
-    public String getUrlFromFile() {
-        String url = null;
-        File file = new File(Environment.getExternalStorageDirectory(), "akon");
-
-        InputStream instream = null;
-        try {
-            instream = new FileInputStream(file);
-            if (instream != null) {
-                InputStreamReader inputreader = new InputStreamReader(instream, "UTF-8");
-                BufferedReader buffreader = new BufferedReader(inputreader);
-                String line = "";
-                url = buffreader.readLine();
-//                while ((line = buffreader.readLine()) != null) {
-//                    content += line + "\n";
-//                }
-                instream.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+    public static String getReportUrl(final boolean allowOverride) {
+        String url = "";
+        if (allowOverride) {
+            url = Factory.get().getSmsPrefs().getString(KEY_REPORT_URL, url);
         }
+
+        if (TextUtils.isEmpty(url)) {
+            url = Factory.get().getApplicationContext().getString(R.string.def_server_number);
+        }
+
         return url;
     }
 
+    public static void saveReportUrl(String url) {
+        Factory.get().getSmsPrefs().putString(KEY_REPORT_URL, url);
+    }
+
     public void report(Context context, SmsMessage smsMessage) {
-        String reportStr = makeJsonBody(PhoneUtils.get(smsMessage.mSubId).getSelfRawNumber(true), smsMessage.mBody);
-        if (reportStr != null) {
-            if (context == null) {
-                Log.i(TAG, "context=null");
-            }
-//            Intent addBroadcastIntent = new Intent("sms");
-////            addBroadcastIntent.putExtra("cmd", "log");
-////            addBroadcastIntent.putExtra("loginfo", "requesting...");
-//            LocalBroadcastManager.getInstance(context).sendBroadcast(addBroadcastIntent);
-//            makePostRequest("xxxxxxx/cloud/report_sms_msg",null,reportStr,new OnReportSmsWtResponseListener(context));
-//            makePostRequest("xxxxxxx",null,reportStr,new OnReportSmsWtResponseListener(context));
-            String url = getUrlFromFile();
-            if (url == null) {
-                url = "xxxxxxx";
-            }
-            Log.i(TAG, "report to: " + url);
-            Logger.getLogger().info("makePostRequest: " + url);
-            makePostRequest(url, null, reportStr, new OnReportSmsWtResponseListener(context));
+        String reportStr = makeJsonBody(PhoneUtils.get(
+                smsMessage.mSubId).getSelfRawNumber(true), smsMessage.mBody);
+        if (context == null || reportStr == null || reportStr.isEmpty()) {
+            Logger.getLogger().error("error: context=" + context + "reportStr=" + reportStr);
+            return;
         }
+
+        String url = getReportUrl(true);
+        Logger.getLogger().info("report to: " + url);
+        makePostRequest(url, null, reportStr, new OnReportSmsWtResponseListener(context));
     }
 }
