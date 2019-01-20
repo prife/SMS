@@ -14,6 +14,10 @@ import android.util.Log;
 import com.freeme.sms.Factory;
 import com.freeme.sms.model.SmsMessage;
 
+import com.wetest.tookit.log.Logger;
+import com.wetest.tookit.report.RequestManager;
+
+
 public class ReadSmsService extends Service {
     private static final String TAG = "ReadSmsService";
     private static final String SMS_INBOX_URI = "content://sms/inbox";
@@ -59,11 +63,13 @@ public class ReadSmsService extends Service {
     }
 
     private void registerObserver() {
+        Logger.getLogger().info("ReadSmsService->onStartCommand->registerObserver()");
         getContentResolver().registerContentObserver(Uri.parse(SMS_URI), true,
                 mReadSmsObserver);
     }
 
     private void unRegisterObserver() {
+        Logger.getLogger().info("ReadSmsService->onStartCommand->unRegisterObserver()");
         if (mReadSmsObserver == null) return;
 
         getContentResolver().unregisterContentObserver(mReadSmsObserver);
@@ -77,14 +83,15 @@ public class ReadSmsService extends Service {
                     if (columnCount > 0) {
                         SmsMessage smsMessage = SmsMessage.get(cursor);
                         Factory.get().setSmsMessage(smsMessage);
+                        Logger.getLogger().info("ReadSmsService->getLastSmsFromCursor()");
                     } else {
-                        Log.wtf(TAG, "cursor.getColumnCount()=" + columnCount);
+                        Logger.getLogger().error("cursor.getColumnCount()=" + columnCount);
                     }
                 } else {
-                    Log.d(TAG, "getLastSmsFromCursor is empty");
+                    Logger.getLogger().error("getLastSmsFromCursor is empty");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "getLastSmsFromCursor error", e);
+                Logger.getLogger().error("getLastSmsFromCursor error" + e.toString());
             } finally {
                 try {
                     cursor.close();
@@ -93,7 +100,7 @@ public class ReadSmsService extends Service {
                 }
             }
         } else {
-            Log.d(TAG, "getLastSmsFromCursor is null");
+            Logger.getLogger().info("getLastSmsFromCursor is null");
         }
     }
 }

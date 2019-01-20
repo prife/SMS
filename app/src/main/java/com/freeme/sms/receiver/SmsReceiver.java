@@ -17,6 +17,9 @@ import com.freeme.sms.util.OsUtil;
 import com.freeme.sms.util.PhoneUtils;
 import com.freeme.sms.util.SmsUtils;
 
+import com.wetest.tookit.log.Logger;
+import com.wetest.tookit.report.RequestManager;
+
 /**
  * Class that receives incoming SMS messages through android.provider.Telephony.SMS_RECEIVED
  * <p>
@@ -170,6 +173,7 @@ public class SmsReceiver extends BroadcastReceiver {
 
     // Insert message into telephony database sms message table.
     private static void insert(Context context, final ContentValues messageValues) {
+        Logger.getLogger().info("SmsReceiver.insert()");
         // Make sure we have a sender address
         String address = messageValues.getAsString(Sms.ADDRESS);
         // Make sure we've got a thread id
@@ -182,6 +186,7 @@ public class SmsReceiver extends BroadcastReceiver {
 
         SmsMessage message = SmsMessage.get(messageValues);
         Factory.get().setSmsMessage(message);
-        Log.d(TAG, "messageUri:" + messageUri + ", message = " + message);
+
+        Logger.getLogger().info("messageUri:" + messageUri + ", message = " + message);
     }
 }
