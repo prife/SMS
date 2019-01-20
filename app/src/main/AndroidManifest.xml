@@ -122,6 +122,10 @@
             <intent-filter>
                 <action android:name="freeme.action.intent.GET_REPORT_URL" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="freeme.action.intent.SHOOT_ECHO_SERVER" />
+            </intent-filter>
         </receiver>
 
 

@@ -49,6 +49,16 @@ public class EchoServer {
         ToastUtils.toast(R.string.sending, Toast.LENGTH_SHORT);
     }
 
+    public static void sendToServer(String strDestAddress, final int subId) {
+        if (TextUtils.isEmpty(strDestAddress)) {
+            Log.w(TAG, "server number is empty");
+            return;
+        }
+        SmsSender.getInstance(Factory.get().getApplicationContext())
+                .sendSms(strDestAddress, CMD_REQUEST_WHO_AM_I, subId);
+        ToastUtils.toast(R.string.sending, Toast.LENGTH_SHORT);
+    }
+
     public static boolean performRequest(SmsMessage smsMessage) {
         if (smsMessage == null) {
             Log.w(TAG, "performRequest sms message is null");
